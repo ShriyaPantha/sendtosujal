@@ -10,52 +10,37 @@ import PlanSubscriptionPage from "../../components/LandingPage/Plansubscriptionp
 
 export default function LandingPage() {
   const [showLogin, setShowLogin] = useState(false);
-  const [loggedIn, setLoggedIn] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Navbar onLoginClick={() => setShowLogin(true)} />
 
-      {!loggedIn ? (
-        <>
-          <Navbar onLoginClick={() => setShowLogin(true)} />
+      <section id="home">
+        <HeroSection onLoginClick={() => setShowLogin(true)} />
+      </section>
 
-          <section id="home">
-            <HeroSection onLoginClick={() => setShowLogin(true)} />
-          </section>
+      <section id="features">
+        <FeaturesSection />
+        <PlanSubscriptionPage />
+      </section>
 
-          <section id="features">
-            <FeaturesSection />
-            <PlanSubscriptionPage/>
-          </section>
+      <section id="portals">
+        <StatsSection />
+      </section>
 
-          {/* PORTALS (if you want) */}
-          <section id="portals">
-            <StatsSection />
-          </section>
+      <section id="contact">
+        <Contacts />
+        <Footer />
+      </section>
 
-          {/* CONTACT + FOOTER */}
-          <section id="contact">
-            <Contacts />
-            <Footer />
-          </section>
-
-          <LoginModal
-            isOpen={showLogin}
-            onClose={() => setShowLogin(false)}
-            onLoginSuccess={(_role, path) => {
-              setShowLogin(false);
-              setLoggedIn(true);
-              window.location.href = path;
-            }}
-          />
-        </>
-      ) : (
-        <div className="flex items-center justify-center h-screen">
-          <h1 className="text-2xl font-bold">
-            Welcome to Dashboard 🚀
-          </h1>
-        </div>
-      )}
+      <LoginModal
+        isOpen={showLogin}
+        onClose={() => setShowLogin(false)}
+        onLoginSuccess={() => {
+          // navigation is handled inside LoginModal via useNavigate
+          setShowLogin(false);
+        }}
+      />
     </div>
   );
 }

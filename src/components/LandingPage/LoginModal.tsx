@@ -4,19 +4,10 @@ import {
   FaEnvelope, FaLock, FaCheckCircle,
 } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import axiosInstance from "../../api/axiosInstance"; 
+import axiosInstance from "../../api/axiosInstance";
+import { ROLE_CONFIGS, type UserRole } from "../constant/roles";
 
 type Mode = "login" | "signup" | "forgot";
-type UserRole = "student" | "teacher" | "parent" | "admin" | "superadmin" | "user";
-
-const ROLE_PATHS: Record<string, string> = {
-  teacher:    "/teacher/dashboard",
-  student:    "/student/dashboard",
-  parent:     "/parent/dashboard",
-  admin:      "/admin/dashboard",
-  superadmin: "/superadmin/dashboard",
-  user:       "/",
-};
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -58,22 +49,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
     return () => { document.body.style.overflow = "auto"; };
   }, [isOpen]);
 
-  // ── LOGIN ─────────────────────────────────────────────────────────────────
+  // ── LOGIN ────────────────────────────────────────────────────────────────
   const handleLogin = async () => {
     setError("");
     if (!email || !password) { setError("Email and password are required"); return; }
 
     setLoading(true);
     try {
-      // axiosInstance uses VITE_API_URL as baseURL + attaches token header automatically
       const { data } = await axiosInstance.post("/api/auth/login", { email, password });
 
-      // Backend shape: { success, token, role, data: { _id, fullName, email, role, ... } }
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user",  JSON.stringify(data.data)); // ← was data.user ❌
+      localStorage.setItem("user",  JSON.stringify(data.data));
 
       const role = data.data.role as UserRole;
-      const path = ROLE_PATHS[role] || "/";
+      const path = ROLE_CONFIGS[role]?.dashboardPath || "/";
 
       setLoading(false);
       setSuccess(true);
@@ -86,13 +75,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
 
     } catch (err: any) {
       setLoading(false);
-      // axiosInstance already logs status/url/message in the interceptor
-      const msg = err.response?.data?.message;
-      setError(msg || "Cannot connect to server. Check that the backend is running.");
+      setError(err.response?.data?.message || "Cannot connect to server.");
     }
   };
 
-  // ── SIGNUP ────────────────────────────────────────────────────────────────
+  // ── SIGNUP ───────────────────────────────────────────────────────────────
   const handleSignup = async () => {
     setError("");
     if (!fullName || !email || !password || !confirmPassword) {
@@ -106,9 +93,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
       await axiosInstance.post("/api/auth/register", { fullName, email, password });
 
       setLoading(false);
-      setSuccess(true);
-      // After OTP is sent the user needs to verify — redirect to login so they can proceed
-      setTimeout(() => { setMode("login"); setSuccess(false); }, 1200);
+
+      // Navigate to OTP page with email + password so we can auto-login after verify
+      navigate("/verify-otp", { state: { email, password } });
+      onClose();
 
     } catch (err: any) {
       setLoading(false);
@@ -116,7 +104,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
     }
   };
 
-  // ── FORGOT PASSWORD ───────────────────────────────────────────────────────
+  // ── FORGOT PASSWORD ──────────────────────────────────────────────────────
   const handleForgot = async () => {
     setError("");
     if (!email) { setError("Enter your email"); return; }
@@ -125,7 +113,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
     try {
       await axiosInstance.post("/api/auth/forgot-password", { email });
     } catch {
-      // swallow — show success regardless to prevent email enumeration
+      // swallow — prevent email enumeration
     } finally {
       setLoading(false);
       setSuccess(true);
@@ -159,9 +147,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
           <div className="text-center py-10">
             <FaCheckCircle className="text-green-400 text-4xl mx-auto" />
             <p className="text-white mt-3">
-              {mode === "forgot"  ? "If that email exists, a reset link has been sent." :
-               mode === "signup"  ? "OTP sent! Check your email to verify." :
-               "Login successful! Redirecting..."}
+              {mode === "forgot"
+                ? "If that email exists, a reset link has been sent."
+                : "Login successful! Redirecting..."}
             </p>
           </div>
         ) : (
